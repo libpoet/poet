@@ -146,40 +146,12 @@ int get_current_cpu_state(const void* states,
   return get_cpu_state((poet_cpu_state_t*) states, num_states, curr_state_id);
 }
 
-static inline unsigned int get_all_subpids(pid_t pid, pid_t* pids) {
-  unsigned int n = 0;
-  FILE *cret;
-  char pid_string[128];
-  char cretpids[100];
-  sprintf(cretpids, "ps -eLf | awk '(/%d/) && (!/awk/) {print $4}'", pid);
-  cret = popen(cretpids, "r");
-
-  if (cret == NULL) {
-    perror("get_all_subpids: Error in popen");
-    return 0;
-  }
-
-  while (fgets(pid_string, 128, cret) != NULL) {
-    pids[n] = atoi(pid_string);
-    n++;
-  }
-
-  if (pclose(cret) == -1) {
-    perror("get_all_subpids: Error in pclose");
-    return 0;
-  }
-
-  return n;
-}
-
 // Set CPU frequency and number of cores using taskset system call
 void apply_cpu_config_taskset(poet_cpu_state_t* cpu_states,
                               unsigned int num_states,
                               unsigned int id,
                               unsigned int last_id) {
   unsigned int i;
-  pid_t pids[128];
-  unsigned int npids = get_all_subpids(getpid(), pids);
   int retvalsyscall = 0;
   char command[4096];
 
@@ -199,24 +171,13 @@ void apply_cpu_config_taskset(poet_cpu_state_t* cpu_states,
 
   // only run taskset if number of cores has changed
   if (cpu_states[id].cores != cpu_states[last_id].cores) {
-    sprintf(command, "taskset -p -c 0-%u  %d",
-            cpu_states[id].cores, getpid());
+    sprintf(command, "ps -eLf | awk '(/%d/) && (!/awk/) {print $4}' | xargs -n1 taskset -p -c 0-%u",
+            getpid(), cpu_states[id].cores);
     printf("apply_cpu_config_taskset: Applying core allocation: %s\n", command);
     retvalsyscall = system(command);
     if (retvalsyscall != 0) {
       fprintf(stderr, "apply_cpu_config_taskset: ERROR running taskset: %d\n",
               retvalsyscall);
-    }
-    for(i = 1; i < npids; i++) {
-      sprintf(command, "taskset -p -c 0-%u  %d",
-              cpu_states[id].cores, pids[i]);
-      printf("PID count: %u/%u\n", i, npids);
-      printf("apply_cpu_config_taskset: Applying core allocation: %s\n", command);
-      retvalsyscall = system(command);
-      if (retvalsyscall != 0) {
-        fprintf(stderr, "apply_cpu_config_taskset: ERROR running taskset: %d\n",
-                retvalsyscall);
-      }
     }
   }
 
