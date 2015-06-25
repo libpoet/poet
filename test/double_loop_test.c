@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <heartbeats/heartbeat-accuracy-power.h>
 #include "poet.h"
 #include "poet_config.h"
 #include "poet_math.h"
@@ -42,21 +43,24 @@ int main(int argc, char** argv) {
   get_control_states("config/default/control_config",
                      &s_control_states,
                      &s_nstates);
-  poet_state * state = poet_init(heart,
+  poet_state * state = poet_init(CONST(atof(argv[2])),
                                  s_nstates, s_control_states, NULL,
                                  NULL,
                                  NULL,
-                                 1, POET_LOG_FILE);
+                                 atoi(argv[3]), 1, POET_LOG_FILE);
   if (state == NULL) {
     fprintf(stderr, "Failed to initialize poet\n");
     return 1;
   }
 
   int i, j;
-
+  heartbeat_record_t hbr;
   for (i = 0; i < BIG_NUM1; i++) {
     heartbeat(heart, i);
-    poet_apply_control(state);
+    hb_get_current(heart, &hbr);
+    real_t hbr_window_rate = hbr_get_window_rate(&hbr);
+    real_t hbr_window_power = hbr_get_window_power(&hbr);
+    poet_apply_control(state, i, hbr_window_rate, hbr_window_power);
 
     for (j = 0; j < BIG_NUM2; j++) {
       dummy = dummy >> 1;

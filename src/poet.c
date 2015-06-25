@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <heartbeats/heartbeat-accuracy-power.h>
 #include "poet.h"
 #include "poet_constants.h"
 #include "poet_math.h"
@@ -19,7 +18,7 @@
 */
 
 typedef struct {
-  int * hb_number;
+  unsigned long * hb_number;
   real_t * hb_rate;
   real_t * x_hat_minus;
   real_t * x_hat;
@@ -58,6 +57,8 @@ struct poet_internal_state {
   int buffer_depth;
   log_buffer * lb;
 
+  real_t perf_goal;
+
   // performance filter state
   filter_state * pfs;
 
@@ -65,13 +66,13 @@ struct poet_internal_state {
   calc_xup_state * scs;
 
   // general
-  heartbeat_t * heart;
   int current_action;
 
   int lower_id;
   int upper_id;
   unsigned int last_id;
   int num_hbs;
+  unsigned int period;
 
   unsigned int num_system_states;
   poet_apply_func apply;
@@ -86,12 +87,13 @@ struct poet_internal_state {
 */
 
 // Allocates and initializes a new poet state variable
-poet_state * poet_init(heartbeat_t * heart,
+poet_state * poet_init(real_t perf_goal,
                        unsigned int num_system_states,
                        poet_control_state_t * control_states,
                        void * apply_states,
                        poet_apply_func apply,
                        poet_curr_state_func current,
+                       unsigned int period,
                        unsigned int buffer_depth,
                        const char * log_filename) {
   int i;
@@ -113,6 +115,12 @@ poet_state * poet_init(heartbeat_t * heart,
   // Allocate memory for state struct
   poet_state * state = (poet_state *) malloc(sizeof(struct poet_internal_state));
 
+  // Remember the performance goal
+  state->perf_goal = perf_goal;
+
+  // Remember the period
+  state->period = period;
+
   // Store log file
   state->log_file = log_file;
   if (state->log_file != NULL) {
@@ -125,7 +133,7 @@ poet_state * poet_init(heartbeat_t * heart,
   // Allocate memory for log buffer
   state->buffer_depth = buffer_depth;
   state->lb = malloc(sizeof(log_buffer));
-  state->lb->hb_number = (int *) malloc(buffer_depth * sizeof(int));
+  state->lb->hb_number = (unsigned long *) malloc(buffer_depth * sizeof(unsigned long));
   state->lb->hb_rate = (real_t *) malloc(buffer_depth * sizeof(real_t));
   state->lb->x_hat_minus = (real_t *) malloc(buffer_depth * sizeof(real_t));
   state->lb->x_hat = (real_t *) malloc(buffer_depth * sizeof(real_t));
@@ -153,7 +161,6 @@ poet_state * poet_init(heartbeat_t * heart,
   state->pfs = pfs;
 
   // initialize general poet variables
-  state->heart = heart;
   state->current_action = CURRENT_ACTION_START;
   state->num_system_states = num_system_states;
   state->apply = apply;
@@ -212,18 +219,17 @@ void poet_destroy(poet_state * state) {
   free(state);
 }
 
-static inline void logger(poet_state * state, int period, real_t workload) {
-  heartbeat_record_t hbr;
-  hb_get_current(state->heart, &hbr);
-
-  int hbr_tag = hbr_get_tag(&hbr);
-  int index = ((hbr_tag / period) % state->buffer_depth);
+static inline void logger(poet_state * state,
+                          real_t workload,
+                          unsigned long id,
+                          real_t perf) {
+  int index = ((id / state->period) % state->buffer_depth);
   filter_state * fs = state->pfs;
   calc_xup_state * cxs = state->scs;
 
   if (state->log_file != NULL) {
-    state->lb->hb_number[index] = hbr_tag;
-    state->lb->hb_rate[index] = hbr_get_window_rate(&hbr);
+    state->lb->hb_number[index] = id;
+    state->lb->hb_rate[index] = perf;
     state->lb->x_hat_minus[index] = fs->x_hat_minus;
     state->lb->x_hat[index] = fs->x_hat;
     state->lb->p_minus[index] = fs->p_minus;
@@ -237,7 +243,7 @@ static inline void logger(poet_state * state, int period, real_t workload) {
     if (index == state->buffer_depth - 1) {
       int i;
       for (i = 0; i < state->buffer_depth; i++) {
-        fprintf(state->log_file, "%16d %16f %16f %16f %16f %16f %16f %16f %16f %16f %16f %16d %16d %16d\n",
+        fprintf(state->log_file, "%16lu %16f %16f %16f %16f %16f %16f %16f %16f %16f %16f %16d %16d %16d\n",
                 state->lb->hb_number[i],
                 real_to_db(state->lb->hb_rate[i]),
                 real_to_db(state->lb->x_hat_minus[i]),
@@ -374,10 +380,10 @@ static inline void calculate_time_division(poet_state * state,
  * Check all pairs of states that can achieve the target and choose the pair
  * with the lowest cost. Uses an n^2 algorithm.
  */
-static inline void translate_n2_with_time(poet_state * state, int period) {
+static inline void translate_n2_with_time(poet_state * state) {
   int i;
   int j;
-  real_t r_period = int_to_real(period);
+  real_t r_period = int_to_real(state->period);
   real_t target_xup;
   real_t best_cost = BIG_REAL_T;
   int best_lower_id = -1;
@@ -428,43 +434,34 @@ static inline void translate_n2_with_time(poet_state * state, int period) {
 }
 
 // Runs POET decision engine and requests system changes
-void poet_apply_control(poet_state * state) {
+void poet_apply_control(poet_state * state,
+                        unsigned long id,
+                        real_t perf,
+                        real_t pwr) {
   if (getenv(POET_DISABLE_CONTROL) != NULL) {
     return;
   }
 
-  heartbeat_record_t hbr;
-  hb_get_current(state->heart, &hbr);
-  int period = hb_get_window_size(state->heart);
-  real_t hbr_window_rate = hbr_get_window_rate(&hbr);
-  real_t hbr_window_power = hbr_get_window_power(&hbr);
-
-  if(state->current_action == 0 && hbr_window_power != R_ZERO) {
-    // Read current performance data
-    real_t act_speed = hbr_window_rate;
-
+  if(state->current_action == 0 && pwr != R_ZERO) {
     // Estimate the performance workload
     // estimate time between heartbeats given minimum amount of resources
-    real_t time_workload = estimate_base_workload(act_speed,
+    real_t time_workload = estimate_base_workload(perf,
                                                   state->scs->u,
                                                   state->pfs);
 
     // Get a new goal speedup to apply to the application
-    real_t min_speed = hb_get_min_rate(state->heart);
-    real_t max_speed = hb_get_max_rate(state->heart);
-    real_t speed_goal = mult(max_speed + min_speed, CONST(0.5));
-    calculate_xup(act_speed, speed_goal, time_workload, state->scs);
+    calculate_xup(perf, state->perf_goal, time_workload, state->scs);
 
-    // printf("\ntarget rate is %f\n", real_to_db(speed_goal));
-    // printf("current rate is %f\n", real_to_db(act_speed));
+    // printf("\ntarget rate is %f\n", real_to_db(state->perf_goal));
+    // printf("current rate is %f\n", real_to_db(perf));
     // printf("calculated speedup is %f\n\n", real_to_db(state->scs->u));
 
     // Xup is translated into a system configuration
     // A certain amount of time is assigned to each system configuration
     // in order to achieve the requested Xup
-    translate_n2_with_time(state, period);
+    translate_n2_with_time(state);
 
-    logger(state, period, time_workload);
+    logger(state, time_workload, id, perf);
   }
 
   // Check which speedup should be applied, upper or lower
@@ -484,5 +481,5 @@ void poet_apply_control(poet_state * state) {
     state->last_id = config_id;
   }
 
-  state->current_action = (state->current_action + 1) % period;
+  state->current_action = (state->current_action + 1) % state->period;
 }

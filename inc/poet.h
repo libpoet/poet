@@ -6,7 +6,6 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <heartbeats/heartbeat-accuracy-power.h>
 
 #ifdef FIXED_POINT
 typedef int32_t real_t;
@@ -63,21 +62,23 @@ typedef struct {
  *
  * Default values for state variables are located in src/poet_constants.h
  *
- * @param heart
+ * @param perf_goal
  * @param num_system_states
  * @param control_states
  * @param apply_states
  * @param apply
  * @param current
+ * @param period
  * @param buffer_depth
  * @param log_filename
  */
-poet_state * poet_init(heartbeat_t * heart,
+poet_state * poet_init(real_t perf_goal,
                        unsigned int num_system_states,
                        poet_control_state_t * control_states,
                        void * apply_states,
                        poet_apply_func apply,
                        poet_curr_state_func current,
+                       unsigned int period,
                        unsigned int buffer_depth,
                        const char * log_filename);
 
@@ -93,8 +94,14 @@ void poet_destroy(poet_state * state);
  * function provided in poet_init().
  *
  * @param state
+ * @param id
+ * @param perf
+ * @param pwr
  */
-void poet_apply_control(poet_state * state);
+void poet_apply_control(poet_state * state,
+                        unsigned long id,
+                        real_t perf,
+                        real_t pwr);
 
 #ifdef __cplusplus
 }
