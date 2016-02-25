@@ -1,19 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 #include "poet_config.h"
 #include "poet.h"
 
 poet_control_state_t * cstates_speed;
 poet_cpu_state_t * cpu_states;
-
-void* thread_worker() {
-  int i = 0;
-  while(1) {
-    i++;
-  }
-}
 
 int main() {
   unsigned int nctl_states;
@@ -29,7 +21,12 @@ int main() {
   }
   printf("get_control_state size: %u\n", nctl_states);
   for (i = 0; i < nctl_states; i++) {
-    printf("%u, %f, %f\n", cstates_speed[i].id, cstates_speed[i].speedup, cstates_speed[i].cost);
+#ifdef FIXED_POINT
+    printf("%u, %d, %d\n",
+#else
+    printf("%u, %f, %f\n",
+#endif
+           cstates_speed[i].id, cstates_speed[i].speedup, cstates_speed[i].cost);
   }
 
   if(get_cpu_states("config/default/cpu_config",

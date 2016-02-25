@@ -96,7 +96,7 @@ poet_state * poet_init(real_t perf_goal,
                        unsigned int period,
                        unsigned int buffer_depth,
                        const char * log_filename) {
-  int i;
+  unsigned int i;
   FILE* log_file = NULL;
 
   if (control_states == NULL) {
@@ -381,8 +381,8 @@ static inline void calculate_time_division(poet_state * state,
  * with the lowest cost. Uses an n^2 algorithm.
  */
 static inline void translate_n2_with_time(poet_state * state) {
-  int i;
-  int j;
+  unsigned int i;
+  unsigned int j;
   real_t r_period = int_to_real(state->period);
   real_t target_xup;
   real_t best_cost = BIG_REAL_T;
@@ -473,7 +473,7 @@ void poet_apply_control(poet_state * state,
     config_id = state->upper_id;
   }
 
-  if (config_id >= 0 && config_id != state->last_id) {
+  if (config_id >= 0 && (unsigned int) config_id != state->last_id) {
     if (state->apply != NULL && getenv(POET_DISABLE_APPLY) == NULL) {
       state->apply(state->apply_states, state->num_system_states, config_id,
                    state->last_id);

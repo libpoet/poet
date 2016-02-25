@@ -13,10 +13,10 @@
 { 3 , CONST(1.585) , CONST(1.3) }}
 
 #define CPU_STATES { \
-{ 0 , CONST(1000000) , CONST(1) } , \
-{ 1 , CONST(1100000) , CONST(1) } , \
-{ 2 , CONST(1200000) , CONST(1) } , \
-{ 3 , CONST(1300000) , CONST(1) }}
+{ 0 , 1000000 , 1 } , \
+{ 1 , 1100000 , 1 } , \
+{ 2 , 1200000 , 1 } , \
+{ 3 , 1300000 , 1 }}
 
 const char* HB_LOG_FILE = "/tmp/heartbeat_log.txt";
 const char* POET_LOG_FILE = "/tmp/poet_log.txt";
@@ -38,19 +38,22 @@ void apply(void * states,
            unsigned int num_states,
            unsigned int id,
            unsigned int last_id) {
-  if (id < 0) {
-    return;
-  }
+  (void) states;
+  (void) num_states;
+  (void) last_id;
   BIG_NUM2  = BIG_NUM2_START / real_to_db(control_states[id].speedup);
 }
 
 double freqs[4] = {2.00, 2.33, 2.67, 3.17};
-int freq_state = 0;
+unsigned int freq_state = 0;
 
 void apply2(void * states,
             unsigned int num_states,
             unsigned int id,
             unsigned int last_id) {
+  (void) states;
+  (void) num_states;
+  (void) last_id;
   char command[4096];
   int i;
   if (freq_state != id) {
