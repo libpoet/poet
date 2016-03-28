@@ -7,13 +7,22 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-unknown-pragmas -Wextra -pedantic
 
 include_directories(${PROJECT_SOURCE_DIR}/inc)
 
+
+# Test Dependencies
+
 if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  # Determine if we should link with librt for libraries that use "clock_gettime"
+  # Determine if we should link with librt for targets that use "clock_gettime"
   include(CheckFunctionExists)
   CHECK_FUNCTION_EXISTS(clock_gettime HAVE_CLOCK_GETTIME)
   if(NOT HAVE_CLOCK_GETTIME)
     find_library(LIBRT NAMES rt)
   endif()
+endif()
+
+find_package(PkgConfig)
+if (PKG_CONFIG_FOUND)
+  pkg_check_modules(HBSPOW hbs-pow)
+  pkg_check_modules(ENERGYMON energymon-default)
 endif()
 
 
@@ -39,11 +48,15 @@ add_executable(math_ut test/math_ut.c)
 add_executable(poet_config_test test/poet_config_test.c)
 target_link_libraries(poet_config_test poet)
 
-add_executable(double_loop_test test/double_loop_test.c)
-target_link_libraries(double_loop_test poet hb-acc-pow-shared ${LIBRT})
+if (HBSPOW_FOUND AND ENERGYMON_FOUND)
+  include_directories(${HBSPOW_INCLUDE_DIRS} ${ENERGYMON_INCLUDE_DIRS})
 
-add_executable(processor_speed_test test/processor_speed_test.c)
-target_link_libraries(processor_speed_test poet hb-acc-pow-shared ${LIBRT})
+  add_executable(double_loop_test test/double_loop_test.c)
+  target_link_libraries(double_loop_test poet -L${HBSPOW_LIBDIR} ${HBSPOW_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_LIBRARIES} ${LIBRT})
+
+  add_executable(processor_speed_test test/processor_speed_test.c)
+  target_link_libraries(processor_speed_test poet -L${HBSPOW_LIBDIR} ${HBSPOW_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_LIBRARIES} ${LIBRT})
+endif()
 
 
 # pkg-config
@@ -65,7 +78,7 @@ configure_file(
 # Install
 
 install(TARGETS poet DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/poet.h ${CMAKE_CURRENT_SOURCE_DIR}/inc/poet_config.h DESTINATION include/${PROJECT_NAME})
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/poet.h ${CMAKE_CURRENT_SOURCE_DIR}/inc/poet_config.h ${CMAKE_CURRENT_SOURCE_DIR}/inc/poet_math.h DESTINATION include/${PROJECT_NAME})
 install(DIRECTORY ${CMAKE_BINARY_DIR}/pkgconfig/ DESTINATION lib/pkgconfig)
 
 

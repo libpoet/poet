@@ -13,7 +13,6 @@ Connor Imes, David H. K. Kim, Martina Maggio, and Henry Hoffmann. "Portable Mult
 
 Running POET Examples
 ----------------------------------------
-First ensure that you have installed the Heartbeats library.
 
 Build the library and test binaries:
 
@@ -22,9 +21,11 @@ $ cd _build
 $ cmake ..
 $ make
 
+For some tests, you need the heartbeats-simple and energymon libraries
+installed.
+
 Run the tests:
 
-$ export LD_LIBRARY_PATH="./lib"
 $ ./[test_binary] [num_beats] [target_rate] [window_size]
 
 The num_beats is the number of total heartbeats the application will cycle
@@ -38,12 +39,6 @@ $ ./[test_binary] [num_beats] 0 [window_size]
 
 If you aren't sure what parameters to use, a good place to start is 200 beats
 and a window size of 20.
-
-IMPORTANT NOTE: The tests will not run until the environment variable
-HEARTBEAT_ENABLED_DIR is set, which is required by the Heartbeats library.
-Just set it to a temporary directory:
-
-$ export HEARTBEAT_ENABLED_DIR=/tmp
 
 
 Installing/Uninstalling POET
