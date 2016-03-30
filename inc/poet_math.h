@@ -7,6 +7,7 @@ extern "C" {
 
 #include <stdio.h>
 #include <stdint.h>
+#include "poet.h"
 
 /*
  * Define Q16 fixed point type
@@ -19,6 +20,7 @@ extern "C" {
 
 #define UNDERFLOW_MARGIN .01
 
+// must be aligned with FIXED_POINT real_t in poet.h, we just don't want to expose this type
 typedef int32_t fp_t;
 
 #define FP_CONST(x) ((fp_t) (((x) >= 0) ? ((x) * 65536.0 + 0.5) : ((x * 65536.0 - 0.5))))
@@ -205,8 +207,6 @@ static inline fp_t FP_DIV(fp_t a, fp_t b) {
 
 #ifdef FIXED_POINT
 
-typedef fp_t real_t;
-
 #define CONST(x) FP_CONST((x))
 #define mult(a,b) (FP_MULT2((a), (b)))
 #define mult3(a,b,c) (FP_MULT3((a), (b), (c)))
@@ -218,8 +218,6 @@ typedef fp_t real_t;
 #define real_to_int(a) (((a) + CONST(.5)) >> 16)
 
 #else
-
-typedef double real_t;
 
 #define CONST(x) DB_CONST((x))
 #define mult(a,b) (DB_MULT2((a), (b)))

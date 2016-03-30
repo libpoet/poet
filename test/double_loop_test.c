@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "poet.h"
 #include "poet_config.h"
+#include "poet_math.h"
 
 const char* HB_LOG_FILE = "/tmp/heartbeat_log.txt";
 const char* POET_LOG_FILE = "/tmp/poet_log.txt";

@@ -5,8 +5,14 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
 #include <heartbeats/heartbeat-accuracy-power.h>
-#include "poet_math.h"
+
+#ifdef FIXED_POINT
+typedef int32_t real_t;
+#else
+typedef double real_t;
+#endif
 
 /**
  * Setting this environment variable tells POET not to execute the
