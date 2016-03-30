@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "poet.h"
 #include "poet_config.h"
+#include "poet_math.h"
 
 #define CONTROL_STATES { \
 { 0 , CONST(1.0) , CONST(1.0) } , \
