@@ -194,6 +194,18 @@ poet_state * poet_init(heartbeat_t * heart,
 void poet_destroy(poet_state * state) {
   free(state->pfs);
   free(state->scs);
+  free(state->lb->hb_number);
+  free(state->lb->hb_rate);
+  free(state->lb->x_hat_minus);
+  free(state->lb->x_hat);
+  free(state->lb->p_minus);
+  free(state->lb->h);
+  free(state->lb->k);
+  free(state->lb->p);
+  free(state->lb->u);
+  free(state->lb->e);
+  free(state->lb->workload);
+  free(state->lb);
   if (state->log_file != NULL) {
     fclose(state->log_file);
   }
