@@ -4,6 +4,11 @@ The Performance with Optimal Energy Toolkit (POET) provides a means to monitor
 and adjust application performance while minimizing energy consumption during
 application runtime.
 
+For details, please see the following and reference as appropriate:
+
+Connor Imes, David H. K. Kim, Martina Maggio, and Henry Hoffmann. "POET: A Portable Approach to Minimizing Energy Under Soft Real-time Constraints". In: RTAS. 2015.
+http://dx.doi.org/10.1109/RTAS.2015.7108419
+
 
 Running POET Examples
 ----------------------------------------
