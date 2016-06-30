@@ -21,7 +21,7 @@ endif()
 
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
-  pkg_check_modules(HBSPOW hbs-pow)
+  pkg_check_modules(HBS heartbeats-simple)
   pkg_check_modules(ENERGYMON energymon-default)
 endif()
 
@@ -48,14 +48,14 @@ add_executable(math_ut test/math_ut.c)
 add_executable(poet_config_test test/poet_config_test.c)
 target_link_libraries(poet_config_test poet)
 
-if (HBSPOW_FOUND AND ENERGYMON_FOUND)
-  include_directories(${HBSPOW_INCLUDE_DIRS} ${ENERGYMON_INCLUDE_DIRS})
+if (HBS_FOUND AND ENERGYMON_FOUND)
+  include_directories(${HBS_INCLUDE_DIRS} ${ENERGYMON_INCLUDE_DIRS})
 
   add_executable(double_loop_test test/double_loop_test.c)
-  target_link_libraries(double_loop_test poet -L${HBSPOW_LIBDIR} ${HBSPOW_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_LIBRARIES} ${LIBRT})
+  target_link_libraries(double_loop_test poet -L${HBS_LIBDIR} ${HBS_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_LIBRARIES} ${LIBRT})
 
   add_executable(processor_speed_test test/processor_speed_test.c)
-  target_link_libraries(processor_speed_test poet -L${HBSPOW_LIBDIR} ${HBSPOW_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_LIBRARIES} ${LIBRT})
+  target_link_libraries(processor_speed_test poet -L${HBS_LIBDIR} ${HBS_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_LIBRARIES} ${LIBRT})
 endif()
 
 
