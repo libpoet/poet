@@ -181,11 +181,11 @@ void apply_cpu_config_taskset(poet_cpu_state_t* cpu_states,
     }
   }
 
+  printf("apply_cpu_config_taskset: Applying CPU frequency: %lu\n", cpu_states[id].freq);
   for (i = 0; i <= cpu_states[num_states - 1].cores; i++) {
     sprintf(command,
             "echo %lu > /sys/devices/system/cpu/cpu%u/cpufreq/scaling_setspeed",
             cpu_states[id].freq, i);
-    printf("apply_cpu_config_taskset: Applying CPU frequency: %s\n", command);
     retvalsyscall = system(command);
     if (retvalsyscall != 0) {
       fprintf(stderr, "apply_cpu_config_taskset: ERROR setting frequencies: %d\n",
