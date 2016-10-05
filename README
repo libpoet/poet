@@ -7,7 +7,8 @@ application runtime.
 For details, please see the following and reference as appropriate:
 
 Connor Imes, David H. K. Kim, Martina Maggio, and Henry Hoffmann. "POET: A Portable Approach to Minimizing Energy Under Soft Real-time Constraints". In: RTAS. 2015.
-http://dx.doi.org/10.1109/RTAS.2015.7108419
+
+Connor Imes, David H. K. Kim, Martina Maggio, and Henry Hoffmann. "Portable Multicore Resource Management for Applications with Performance Constraints". In: MCSoC. 2016.
 
 
 Running POET Examples
