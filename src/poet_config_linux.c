@@ -111,6 +111,9 @@ int get_cpu_state(const poet_cpu_state_t* states,
   unsigned int i;
   unsigned int all_userspace = 1;
   unsigned int curr_cpu_count = get_current_cpu_count();
+  if (curr_cpu_count == 0) {
+    return ret;
+  }
   unsigned long freqs[curr_cpu_count];
 
   // these loops work since we use cores in order starting at cpu0

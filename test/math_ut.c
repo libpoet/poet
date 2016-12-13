@@ -118,6 +118,7 @@ void conversion_to_fp_test() {
   a2 = fp_to_db(a1);
   expression = d_abs(189.24 - a2) < ERROR_MARGIN;
   sprintf(error_message, "\nDouble was %f but fixed point was %f\n", 189.24, a2);
+  assert(expression, error_message);
 
   // Test 4
   a1 = FP_CONST(-1.2);

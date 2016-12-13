@@ -361,7 +361,6 @@ static inline void calculate_time_division(poet_state * state,
     // If lower rate and upper rate are equal, no need for time division
     if (upper_xup == lower_xup) {
       x = R_ZERO;
-      state->num_hbs = 0;
     } else {
       // This equation ensures the time period of the combined rates is equal
       // to the time period of the target rate
@@ -369,10 +368,9 @@ static inline void calculate_time_division(poet_state * state,
       // Solve for X
       x = div(mult(upper_xup, lower_xup) - mult(target_xup, lower_xup),
               mult(upper_xup, target_xup) - mult(target_xup, lower_xup));
-
-      // Num of hbs (in lower state) = x * (controller period)
-      state->num_hbs = real_to_int(mult(r_period, x));
     }
+    // Num of hbs (in lower state) = x * (controller period)
+    state->num_hbs = real_to_int(mult(r_period, x));
   }
 }
 
