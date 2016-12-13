@@ -34,7 +34,7 @@ void addition_test(fp_t a, fp_t b, double c, double d) {
 
   expression = d_abs(fp_to_db(ans) - expected) < ERROR_MARGIN;
 
-  sprintf(error_message, "\nExpected %f but calculated %f\n", expected, fp_to_db(ans));
+  snprintf(error_message, sizeof(error_message), "\nExpected %f but calculated %f\n", expected, fp_to_db(ans));
 
   assert(expression, error_message);
 }
@@ -50,7 +50,7 @@ void subtraction_test(fp_t a, fp_t b, double c, double d) {
 
   expression = d_abs(fp_to_db(ans) - expected) < ERROR_MARGIN;
 
-  sprintf(error_message, "\nExpected %f but calculated %f\n", expected, fp_to_db(ans));
+  snprintf(error_message, sizeof(error_message), "\nExpected %f but calculated %f\n", expected, fp_to_db(ans));
 
   assert(expression, error_message);
 }
@@ -66,7 +66,7 @@ void multiplication_test(fp_t a, fp_t b, double c, double d) {
 
   expression = d_abs(fp_to_db(ans) - expected) < ERROR_MARGIN;
 
-  sprintf(error_message,
+  snprintf(error_message, sizeof(error_message),
       "\nExpected %f but calculated %f with a=%f b=%f\n",
       expected, fp_to_db(ans), c, d);
 
@@ -84,7 +84,7 @@ void division_test(fp_t a, fp_t b, double c, double d) {
 
   expression = d_abs(fp_to_db(ans) - expected) < ERROR_MARGIN;
 
-  sprintf(error_message,
+  snprintf(error_message, sizeof(error_message),
       "\nExpected %f but calculated %f with a=%f b=%f\n",
       expected, fp_to_db(ans), c, d);
 
@@ -103,28 +103,28 @@ void conversion_to_fp_test() {
   a1 = FP_CONST(1.2);
   a2 = fp_to_db(a1);
   expression = (d_abs(1.2 - a2) < ERROR_MARGIN);
-  sprintf(error_message, "\nDouble was %f but fixed point was %f\n", 1.2, a2);
+  snprintf(error_message, sizeof(error_message), "\nDouble was %f but fixed point was %f\n", 1.2, a2);
   assert(expression, error_message);
 
   // Test 2
   a1 = FP_CONST(89.234);
   a2 = fp_to_db(a1);
   expression = d_abs(89.234 - a2) < ERROR_MARGIN;
-  sprintf(error_message, "\nDouble was %f but fixed point was %f\n", 89.234, a2);
+  snprintf(error_message, sizeof(error_message), "\nDouble was %f but fixed point was %f\n", 89.234, a2);
   assert(expression, error_message);
 
   // Test 3
   a1 = FP_CONST(189.24);
   a2 = fp_to_db(a1);
   expression = d_abs(189.24 - a2) < ERROR_MARGIN;
-  sprintf(error_message, "\nDouble was %f but fixed point was %f\n", 189.24, a2);
+  snprintf(error_message, sizeof(error_message), "\nDouble was %f but fixed point was %f\n", 189.24, a2);
   assert(expression, error_message);
 
   // Test 4
   a1 = FP_CONST(-1.2);
   a2 = fp_to_db(a1);
   expression = d_abs(-1.2 - a2) < ERROR_MARGIN;
-  sprintf(error_message, "\nDouble was %f but fixed point was %f\n", -1.2, a2);
+  snprintf(error_message, sizeof(error_message), "\nDouble was %f but fixed point was %f\n", -1.2, a2);
   assert(expression, error_message);
 
   printf("Done\n");

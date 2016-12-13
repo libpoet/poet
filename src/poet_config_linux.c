@@ -58,8 +58,8 @@ static inline int cpu_governor_cmp(unsigned int cpu, char* governor) {
   int governor_cmp = -1;
   size_t len;
 
-  sprintf(buffer,
-          "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_governor", cpu);
+  snprintf(buffer, sizeof(buffer),
+           "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_governor", cpu);
   fp = fopen(buffer, "r");
   if (fp == NULL) {
     fprintf(stderr, "cpu_governor_cmp: Failed to open %s\n", buffer);
@@ -87,8 +87,8 @@ static inline unsigned long get_current_cpu_frequency(unsigned int cpu) {
   char buffer[128];
   unsigned long curr_freq = 0;
 
-  sprintf(buffer,
-          "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_cur_freq", cpu);
+  snprintf(buffer, sizeof(buffer),
+           "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_cur_freq", cpu);
   fp = fopen(buffer, "r");
   if (fp == NULL) {
     fprintf(stderr, "get_current_cpu_frequency: Failed to open %s\n", buffer);
@@ -174,8 +174,9 @@ void apply_cpu_config_taskset(poet_cpu_state_t* cpu_states,
 
   // only run taskset if number of cores has changed
   if (cpu_states[id].cores != cpu_states[last_id].cores) {
-    sprintf(command, "ps -eLf | awk '(/%d/) && (!/awk/) {print $4}' | xargs -n1 taskset -p -c 0-%u",
-            getpid(), cpu_states[id].cores);
+    snprintf(command, sizeof(command),
+             "ps -eLf | awk '(/%d/) && (!/awk/) {print $4}' | xargs -n1 taskset -p -c 0-%u",
+             getpid(), cpu_states[id].cores);
     printf("apply_cpu_config_taskset: Applying core allocation: %s\n", command);
     retvalsyscall = system(command);
     if (retvalsyscall != 0) {
@@ -186,9 +187,9 @@ void apply_cpu_config_taskset(poet_cpu_state_t* cpu_states,
 
   printf("apply_cpu_config_taskset: Applying CPU frequency: %lu\n", cpu_states[id].freq);
   for (i = 0; i <= cpu_states[num_states - 1].cores; i++) {
-    sprintf(command,
-            "echo %lu > /sys/devices/system/cpu/cpu%u/cpufreq/scaling_setspeed",
-            cpu_states[id].freq, i);
+    snprintf(command, sizeof(command),
+             "echo %lu > /sys/devices/system/cpu/cpu%u/cpufreq/scaling_setspeed",
+             cpu_states[id].freq, i);
     retvalsyscall = system(command);
     if (retvalsyscall != 0) {
       fprintf(stderr, "apply_cpu_config_taskset: ERROR setting frequencies: %d\n",
@@ -231,10 +232,10 @@ static inline unsigned int get_num_states(FILE* rfile) {
 }
 
 /* Example file:
-  #id	  speedup		  powerup
-  0	    1		        1
-  1	    1.206124137	1.084785357
-  2	    1.387207669	1.196666697
+  #id   speedup     powerup
+  0     1           1
+  1     1.206124137 1.084785357
+  2     1.387207669 1.196666697
  */
 int get_control_states(const char* path,
                        poet_control_state_t** cstates,
@@ -302,10 +303,10 @@ int get_control_states(const char* path,
 }
 
 /* Example file:
-  #id	  freq	  cores
-  0	    300000	0
-  1	    350000	2
-  2	    400000	1
+  #id   freq    cores
+  0     300000  0
+  1     350000  2
+  2     400000  1
  */
 int get_cpu_states(const char* path,
                    poet_cpu_state_t** cstates,

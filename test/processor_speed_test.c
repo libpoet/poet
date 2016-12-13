@@ -59,9 +59,9 @@ void apply2(void * states,
   int i;
   if (freq_state != id) {
     for(i = 0; i < 8; i++) {
-      sprintf(command,
-  	       "echo %d > /sys/devices/system/cpu/cpu%d/cpufreq/scaling_setspeed",
-          (int) (freqs[id] * 1000000), i);
+      snprintf(command, sizeof(command),
+               "echo %d > /sys/devices/system/cpu/cpu%d/cpufreq/scaling_setspeed",
+               (int) (freqs[id] * 1000000), i);
       system(command);
     }
     freq_state = id;
