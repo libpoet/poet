@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,20 +17,6 @@
 ###########  POET INTERNAL DATATYPES #############
 ##################################################
 */
-
-typedef struct {
-  unsigned long * hb_number;
-  real_t * hb_rate;
-  real_t * x_hat_minus;
-  real_t * x_hat;
-  real_t * p_minus;
-  real_t * h;
-  real_t * k;
-  real_t * p;
-  real_t * u;
-  real_t * e;
-  real_t * workload;
-} log_buffer;
 
 // Represents state of kalman filter used in estimate_workload
 typedef struct {
@@ -51,19 +38,30 @@ typedef struct {
   real_t umax;
 } calc_xup_state;
 
+typedef struct {
+  unsigned long tag;
+  real_t act_rate;
+  filter_state pfs;
+  calc_xup_state scs;
+  real_t workload;
+  int lower_id;
+  int upper_id;
+  int low_state_iters;
+} poet_record;
+
 struct poet_internal_state {
   // log file and log buffer
   FILE * log_file;
-  int buffer_depth;
-  log_buffer * lb;
+  unsigned int buffer_depth;
+  poet_record * lb;
 
   real_t perf_goal;
 
   // performance filter state
-  filter_state * pfs;
+  filter_state pfs;
 
   // speedup calculation state
-  calc_xup_state * scs;
+  calc_xup_state scs;
 
   // general
   int current_action;
@@ -71,7 +69,7 @@ struct poet_internal_state {
   int lower_id;
   int upper_id;
   unsigned int last_id;
-  int num_hbs;
+  int low_state_iters;
   unsigned int period;
 
   unsigned int num_system_states;
@@ -97,23 +95,18 @@ poet_state * poet_init(real_t perf_goal,
                        unsigned int buffer_depth,
                        const char * log_filename) {
   unsigned int i;
-  FILE* log_file = NULL;
 
-  if (control_states == NULL) {
+  if (perf_goal <= R_ZERO || num_system_states == 0 || control_states == NULL || period == 0 ||
+      (buffer_depth == 0 && log_filename != NULL)) {
+    errno = EINVAL;
     return NULL;
-  }
-
-  // Open log file
-  if (log_filename != NULL) {
-    log_file = fopen(log_filename, "w");
-    if (log_file == NULL) {
-      perror("Failed to open POET log file");
-      return NULL;
-    }
   }
 
   // Allocate memory for state struct
   poet_state * state = (poet_state *) malloc(sizeof(struct poet_internal_state));
+  if (state == NULL) {
+    return NULL;
+  }
 
   // Remember the performance goal
   state->perf_goal = perf_goal;
@@ -121,44 +114,42 @@ poet_state * poet_init(real_t perf_goal,
   // Remember the period
   state->period = period;
 
-  // Store log file
-  state->log_file = log_file;
-  if (state->log_file != NULL) {
-    fprintf(state->log_file,
-            "%16s %16s %16s %16s %16s %16s %16s %16s %16s %16s %16s %16s %16s %16s\n",
-            "HB_NUM", "HB_RATE", "X_HAT_MINUS", "X_HAT", "P_MINUS", "H", "K",
-            "P", "SPEEDUP", "ERROR", "WORKLOAD", "LOWER_ID", "UPPER_ID", "NUM_HBS");
-  }
-
   // Allocate memory for log buffer
   state->buffer_depth = buffer_depth;
-  state->lb = malloc(sizeof(log_buffer));
-  state->lb->hb_number = (unsigned long *) malloc(buffer_depth * sizeof(unsigned long));
-  state->lb->hb_rate = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->x_hat_minus = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->x_hat = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->p_minus = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->h = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->k = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->p = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->u = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->e = (real_t *) malloc(buffer_depth * sizeof(real_t));
-  state->lb->workload = (real_t *) malloc(buffer_depth * sizeof(real_t));
+  if (buffer_depth > 0) {
+    state->lb = malloc(buffer_depth * sizeof(poet_record));
+    if (state->lb == NULL) {
+      free(state);
+      return NULL;
+    }
+  } else {
+    state->lb = NULL;
+  }
 
-  // Allocate memory for performance filter state
-  filter_state * pfs = (filter_state *) malloc(sizeof(filter_state));
-
-  // Allocate memory for speedup calculation state
-  calc_xup_state * scs = (calc_xup_state *) malloc(sizeof(calc_xup_state));
+  // Open log file
+  if (log_filename == NULL) {
+    state->log_file = NULL;
+  } else {
+    state->log_file = fopen(log_filename, "w");
+    if (state->log_file == NULL) {
+      perror(log_filename);
+      free(state->lb);
+      free(state);
+      return NULL;
+    }
+    fprintf(state->log_file,
+            "%16s %16s %16s %16s %16s %16s %16s %16s %16s %16s %16s %16s %16s %16s\n",
+            "TAG", "ACTUAL_RATE", "X_HAT_MINUS", "X_HAT", "P_MINUS", "H", "K",
+            "P", "SPEEDUP", "ERROR", "WORKLOAD", "LOWER_ID", "UPPER_ID", "LOW_STATE_ITERS");
+  }
 
   // initialize variables used in the performance filter
-  pfs->x_hat_minus = X_HAT_MINUS_START;
-  pfs->x_hat = X_HAT_START;
-  pfs->p_minus = P_MINUS_START;
-  pfs->h = H_START;
-  pfs->k = K_START;
-  pfs->p = P_START;
-  state->pfs = pfs;
+  state->pfs.x_hat_minus = X_HAT_MINUS_START;
+  state->pfs.x_hat = X_HAT_START;
+  state->pfs.p_minus = P_MINUS_START;
+  state->pfs.h = H_START;
+  state->pfs.k = K_START;
+  state->pfs.p = P_START;
 
   // initialize general poet variables
   state->current_action = CURRENT_ACTION_START;
@@ -177,20 +168,19 @@ poet_state * poet_init(real_t perf_goal,
   }
 
   // initialize variables used for calculating speedup
-  scs->u = state->control_states[state->last_id].speedup;
-  scs->uo = scs->u;
-  scs->uoo = scs->u;
-  scs->e = E_START;
-  scs->eo = EO_START;
-  state->scs = scs;
+  state->scs.u = state->control_states[state->last_id].speedup;
+  state->scs.uo = state->scs.u;
+  state->scs.uoo = state->scs.u;
+  state->scs.e = E_START;
+  state->scs.eo = EO_START;
 
-  state->num_hbs = 0;
+  state->low_state_iters = 0;
 
   // Calculate max_speedup
-  scs->umax = R_ONE;
+  state->scs.umax = R_ONE;
   for (i = 0; i < state->num_system_states; i++) {
-    if (state->control_states[i].speedup >= scs->umax) {
-      scs->umax = state->control_states[i].speedup;
+    if (state->control_states[i].speedup >= state->scs.umax) {
+      state->scs.umax = state->control_states[i].speedup;
     }
   }
 
@@ -199,70 +189,62 @@ poet_state * poet_init(real_t perf_goal,
 
 // Destroys poet state variable
 void poet_destroy(poet_state * state) {
-  free(state->pfs);
-  free(state->scs);
-  free(state->lb->hb_number);
-  free(state->lb->hb_rate);
-  free(state->lb->x_hat_minus);
-  free(state->lb->x_hat);
-  free(state->lb->p_minus);
-  free(state->lb->h);
-  free(state->lb->k);
-  free(state->lb->p);
-  free(state->lb->u);
-  free(state->lb->e);
-  free(state->lb->workload);
-  free(state->lb);
-  if (state->log_file != NULL) {
-    fclose(state->log_file);
+  if (state != NULL) {
+    if (state->log_file != NULL) {
+      fclose(state->log_file);
+    }
+    free(state->lb);
+    free(state);
   }
-  free(state);
+}
+
+// Change the performance goal at runtime.
+void poet_set_performance_goal(poet_state * state,
+                               real_t perf_goal) {
+  if (state != NULL && perf_goal > R_ZERO) {
+    state->perf_goal = perf_goal;
+  }
 }
 
 static inline void logger(poet_state * state,
                           real_t workload,
                           unsigned long id,
                           real_t perf) {
-  int index = ((id / state->period) % state->buffer_depth);
-  filter_state * fs = state->pfs;
-  calc_xup_state * cxs = state->scs;
+  unsigned int index;
+  unsigned int i;
 
   if (state->log_file != NULL) {
-    state->lb->hb_number[index] = id;
-    state->lb->hb_rate[index] = perf;
-    state->lb->x_hat_minus[index] = fs->x_hat_minus;
-    state->lb->x_hat[index] = fs->x_hat;
-    state->lb->p_minus[index] = fs->p_minus;
-    state->lb->h[index] = fs->h;
-    state->lb->k[index] = fs->k;
-    state->lb->p[index] = fs->p;
-    state->lb->u[index] = cxs->u;
-    state->lb->e[index] = cxs->e;
-    state->lb->workload[index] = workload;
+    index = (id / state->period) % state->buffer_depth;
+    state->lb[index].tag = id;
+    state->lb[index].act_rate = perf;
+    memcpy(&state->lb[index].pfs, &state->pfs, sizeof(filter_state));
+    memcpy(&state->lb[index].scs, &state->scs, sizeof(calc_xup_state));
+    state->lb[index].workload = workload;
+    state->lb[index].lower_id = state->lower_id;
+    state->lb[index].upper_id = state->upper_id;
+    state->lb[index].low_state_iters = state->low_state_iters;
 
     if (index == state->buffer_depth - 1) {
-      int i;
       for (i = 0; i < state->buffer_depth; i++) {
         fprintf(state->log_file, "%16lu %16f %16f %16f %16f %16f %16f %16f %16f %16f %16f %16d %16d %16d\n",
-                state->lb->hb_number[i],
-                real_to_db(state->lb->hb_rate[i]),
-                real_to_db(state->lb->x_hat_minus[i]),
-                real_to_db(state->lb->x_hat[i]),
-                real_to_db(state->lb->p_minus[i]),
-                real_to_db(state->lb->h[i]),
-                real_to_db(state->lb->k[i]),
-                real_to_db(state->lb->p[i]),
-                real_to_db(state->lb->u[i]),
-                real_to_db(state->lb->e[i]),
-                real_to_db(state->lb->workload[i]),
-                state->lower_id,
-                state->upper_id,
-                state->num_hbs);
+                state->lb[i].tag,
+                real_to_db(state->lb[i].act_rate),
+                real_to_db(state->lb[i].pfs.x_hat_minus),
+                real_to_db(state->lb[i].pfs.x_hat),
+                real_to_db(state->lb[i].pfs.p_minus),
+                real_to_db(state->lb[i].pfs.h),
+                real_to_db(state->lb[i].pfs.k),
+                real_to_db(state->lb[i].pfs.p),
+                real_to_db(state->lb[i].scs.u),
+                real_to_db(state->lb[i].scs.e),
+                real_to_db(state->lb[i].workload),
+                state->lb[i].lower_id,
+                state->lb[i].upper_id,
+                state->lb[i].low_state_iters);
       }
     }
   }
 }
-
 
 /*
  * Estimates the base workload of the application by estimating
@@ -350,7 +332,7 @@ static inline void calculate_time_division(poet_state * state,
     real_t target_xup;
     upper_xup = state->control_states[state->upper_id].speedup;
     lower_xup = state->control_states[state->lower_id].speedup;
-    target_xup = state->scs->u;
+    target_xup = state->scs.u;
 
     // x represents the percentage of heartbeats spent in the first (lower)
     // configuration
@@ -369,8 +351,8 @@ static inline void calculate_time_division(poet_state * state,
       x = div(mult(upper_xup, lower_xup) - mult(target_xup, lower_xup),
               mult(upper_xup, target_xup) - mult(target_xup, lower_xup));
     }
-    // Num of hbs (in lower state) = x * (controller period)
-    state->num_hbs = real_to_int(mult(r_period, x));
+    // Num of iterations (in lower state) = x * (controller period)
+    state->low_state_iters = real_to_int(mult(r_period, x));
   }
 }
 
@@ -386,14 +368,14 @@ static inline void translate_n2_with_time(poet_state * state) {
   real_t best_cost = BIG_REAL_T;
   int best_lower_id = -1;
   int best_upper_id = -1;
-  int best_num_hbs = -1;
+  int best_low_state_iters = -1;
   real_t lower_xup;
   real_t upper_xup;
   real_t lower_xup_cost;
   real_t upper_xup_cost;
-  real_t r_hbs;
+  real_t r_low_state_iters;
   real_t cost;
-  target_xup = state->scs->u;
+  target_xup = state->scs.u;
 
   for (i = 0; i < state->num_system_states; i++) {
     upper_xup = state->control_states[i].speedup;
@@ -412,14 +394,14 @@ static inline void translate_n2_with_time(poet_state * state) {
       // find time for both states
       calculate_time_division(state, r_period);
       // find cost of this state combination
-      r_hbs = int_to_real(state->num_hbs);
-      cost = mult(div(r_hbs, lower_xup), lower_xup_cost) +
-             mult(div(r_period - r_hbs, upper_xup), upper_xup_cost);
+      r_low_state_iters = int_to_real(state->low_state_iters);
+      cost = mult(div(r_low_state_iters, lower_xup), lower_xup_cost) +
+             mult(div(r_period - r_low_state_iters, upper_xup), upper_xup_cost);
       // if this is the best configuration so far, remember it
       if (cost < best_cost) {
         best_lower_id = j;
         best_upper_id = i;
-        best_num_hbs = state->num_hbs;
+        best_low_state_iters = state->low_state_iters;
         best_cost = cost;
       }
     }
@@ -428,7 +410,7 @@ static inline void translate_n2_with_time(poet_state * state) {
   // use the best configuration
   state->lower_id = best_lower_id;
   state->upper_id = best_upper_id;
-  state->num_hbs = best_num_hbs;
+  state->low_state_iters = best_low_state_iters;
 }
 
 // Runs POET decision engine and requests system changes
@@ -436,19 +418,20 @@ void poet_apply_control(poet_state * state,
                         unsigned long id,
                         real_t perf,
                         real_t pwr) {
-  if (getenv(POET_DISABLE_CONTROL) != NULL) {
+  (void) pwr;
+  if (state == NULL || getenv(POET_DISABLE_CONTROL) != NULL) {
     return;
   }
 
-  if(state->current_action == 0 && pwr != R_ZERO) {
+  if (state->current_action == 0) {
     // Estimate the performance workload
     // estimate time between heartbeats given minimum amount of resources
     real_t time_workload = estimate_base_workload(perf,
-                                                  state->scs->u,
-                                                  state->pfs);
+                                                  state->scs.u,
+                                                  &state->pfs);
 
     // Get a new goal speedup to apply to the application
-    calculate_xup(perf, state->perf_goal, time_workload, state->scs);
+    calculate_xup(perf, state->perf_goal, time_workload, &state->scs);
 
     // printf("\ntarget rate is %f\n", real_to_db(state->perf_goal));
     // printf("current rate is %f\n", real_to_db(perf));
@@ -464,9 +447,9 @@ void poet_apply_control(poet_state * state,
 
   // Check which speedup should be applied, upper or lower
   int config_id = -1;
-  if (state->num_hbs > 0) {
+  if (state->low_state_iters > 0) {
     config_id = state->lower_id;
-    state->num_hbs--;
+    state->low_state_iters--;
   } else if (state->upper_id >= 0) {
     config_id = state->upper_id;
   }
