@@ -52,10 +52,10 @@ if (HBS_FOUND AND ENERGYMON_FOUND)
   include_directories(${HBS_INCLUDE_DIRS} ${ENERGYMON_INCLUDE_DIRS})
 
   add_executable(double_loop_test test/double_loop_test.c)
-  target_link_libraries(double_loop_test poet -L${HBS_LIBDIR} ${HBS_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_LIBRARIES} ${LIBRT})
+  target_link_libraries(double_loop_test poet -L${HBS_LIBDIR} ${HBS_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_STATIC_LIBRARIES} ${LIBRT})
 
   add_executable(processor_speed_test test/processor_speed_test.c)
-  target_link_libraries(processor_speed_test poet -L${HBS_LIBDIR} ${HBS_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_LIBRARIES} ${LIBRT})
+  target_link_libraries(processor_speed_test poet -L${HBS_LIBDIR} ${HBS_LIBRARIES} -L${ENERGYMON_LIBDIR} ${ENERGYMON_STATIC_LIBRARIES} ${LIBRT})
 endif()
 
 
