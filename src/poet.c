@@ -38,6 +38,7 @@ typedef struct {
   real_t umax;
 } calc_xup_state;
 
+// Container for log records
 typedef struct {
   unsigned long tag;
   real_t act_rate;
@@ -206,7 +207,7 @@ void poet_set_performance_goal(poet_state * state,
   }
 }
 
-static inline void logger(poet_state * state,
+static inline void logger(const poet_state * state,
                           real_t workload,
                           unsigned long id,
                           real_t perf) {
@@ -249,7 +250,7 @@ static inline void logger(poet_state * state,
 /*
  * Estimates the base workload of the application by estimating
  * either the amount of time (in seconds) or the amount of energy
- * (in joules)  which elapses between heartbeats without any knobs
+ * (in joules)  which elapses between iterations without any knobs
  * activated by poet.
  *
  * Uses a Kalman Filter
@@ -334,9 +335,9 @@ static inline void calculate_time_division(poet_state * state,
     lower_xup = state->control_states[state->lower_id].speedup;
     target_xup = state->scs.u;
 
-    // x represents the percentage of heartbeats spent in the first (lower)
+    // x represents the percentage of iterations spent in the first (lower)
     // configuration
-    // Conversely, (1 - x) is the percentage of heartbeats in the second
+    // Conversely, (1 - x) is the percentage of iterations in the second
     // (upper) configuration
     real_t x;
 
@@ -425,17 +426,13 @@ void poet_apply_control(poet_state * state,
 
   if (state->current_action == 0) {
     // Estimate the performance workload
-    // estimate time between heartbeats given minimum amount of resources
+    // estimate time between iterations given minimum amount of resources
     real_t time_workload = estimate_base_workload(perf,
                                                   state->scs.u,
                                                   &state->pfs);
 
     // Get a new goal speedup to apply to the application
     calculate_xup(perf, state->perf_goal, time_workload, &state->scs);
-
-    // printf("\ntarget rate is %f\n", real_to_db(state->perf_goal));
-    // printf("current rate is %f\n", real_to_db(perf));
-    // printf("calculated speedup is %f\n\n", real_to_db(state->scs->u));
 
     // Xup is translated into a system configuration
     // A certain amount of time is assigned to each system configuration
