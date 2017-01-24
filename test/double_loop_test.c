@@ -1,4 +1,4 @@
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -9,11 +9,8 @@
 #include "poet_config.h"
 #include "poet_math.h"
 
-const char* POET_LOG_FILE = "/tmp/poet_log.txt";
-
-int BIG_NUM1;
-int BIG_NUM2_START = 10000000;
-int BIG_NUM2 = 10000000;
+const char* POET_LOG_FILE = "poet.log";
+const unsigned int WORK_ITERATIONS = 10000000;
 
 static inline uint64_t get_time(void) {
   struct timespec ts;
@@ -49,7 +46,7 @@ int main(int argc, char** argv) {
     perror("malloc");
     return 1;
   }
-  int hb_fd = 1;
+  int hb_fd = fileno(stdout);
   if (heartbeat_pow_init(&hb, window_size, hb_window_buffer, hb_fd, NULL)) {
     perror("Failed to initialize heartbeat");
     return 1;
@@ -62,7 +59,7 @@ int main(int argc, char** argv) {
   }
 
   volatile int dummy = 0;
-  BIG_NUM1 = atoi(argv[1]);
+  unsigned int num_beats = atoi(argv[1]);
   unsigned int s_nstates;
   poet_control_state_t * s_control_states;
   get_control_states("../config/default/control_config",
@@ -78,14 +75,14 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  int i, j;
+  unsigned int i, j;
   uint64_t time_start, time_end, energy_start, energy_end;
   time_end = get_time();
   energy_end = em.fread(&em);
-  for (i = 0; i < BIG_NUM1; i++) {
+  for (i = 0; i < num_beats; i++) {
     time_start = time_end;
     energy_start = energy_end;
-    for (j = 0; j < BIG_NUM2; j++) {
+    for (j = 0; j < WORK_ITERATIONS; j++) {
       dummy = dummy >> 1;
       dummy = dummy - 1;
     }
