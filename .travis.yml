@@ -3,41 +3,35 @@ os:
   # We don't have an implementation that supports OSX (and poet_config_linux won't compile)
   # - osx
 
-addons:
-  apt:
-    sources:
-      - kubuntu-backports
-    packages:
-      - cmake
-
 language: c
 
+compiler:
+  - gcc
+  - clang
+
 install:
+  - mkdir _dep_install
   # heartbeats-simple dependency
   - wget https://github.com/libheartbeats/heartbeats-simple/archive/master.zip
   - unzip master.zip
   - rm master.zip
-  - cd heartbeats-simple-master
-  - mkdir _build
-  - cd _build
-  - cmake -DCMAKE_INSTALL_PREFIX=_install ..
-  - make
-  - make install
+  - mkdir -p heartbeats-simple-master/_build
+  - cd heartbeats-simple-master/_build
+  - cmake -DCMAKE_INSTALL_PREFIX=../../_dep_install ..
+  - cmake --build . --target install
   - cd ../..
   # energymon dependency (use default dummy implementation)
   - wget https://github.com/energymon/energymon/archive/master.zip
   - unzip master.zip
   - rm master.zip
-  - cd energymon-master
-  - mkdir _build
-  - cd _build
-  - cmake -DCMAKE_INSTALL_PREFIX=_install ..
-  - make
-  - make install
+  - mkdir -p energymon-master/_build
+  - cd energymon-master/_build
+  - cmake -DCMAKE_INSTALL_PREFIX=../../_dep_install ..
+  - cmake --build . --target install
   - cd ../..
 
 script:
   - mkdir _build
   - cd _build
-  - PKG_CONFIG_PATH="../heartbeats-simple-master/_build/_install/lib/pkgconfig:../energymon-master/_build/_install/lib/pkgconfig" cmake ..
-  - make
+  - PKG_CONFIG_PATH="../_dep_install/lib/pkgconfig" cmake ..
+  - cmake --build .
