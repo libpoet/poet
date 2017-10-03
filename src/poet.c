@@ -342,7 +342,7 @@ static inline void calculate_time_division(poet_state * state,
     real_t x;
 
     // If lower rate and upper rate are equal, no need for time division
-    if (upper_xup == lower_xup) {
+    if (upper_xup <= lower_xup && upper_xup >= lower_xup) {
       x = R_ZERO;
     } else {
       // This equation ensures the time period of the combined rates is equal

@@ -31,10 +31,10 @@ const unsigned int WORK_ITERATIONS = 10000000;
 poet_control_state_t control_states[] = CONTROL_STATES;
 poet_cpu_state_t cpu_states[] = CPU_STATES;
 
-void apply(void* states,
-           unsigned int num_states,
-           unsigned int id,
-           unsigned int last_id) {
+static void apply(void* states,
+                  unsigned int num_states,
+                  unsigned int id,
+                  unsigned int last_id) {
   (void) states;
   (void) num_states;
   (void) last_id;

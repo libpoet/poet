@@ -33,5 +33,10 @@ install:
 script:
   - mkdir _build
   - cd _build
-  - PKG_CONFIG_PATH="../_dep_install/lib/pkgconfig" cmake ..
+    # Test build with stricter flags
+  - export CFLAGS="-D_FORTIFY_SOURCE=2 -fstack-protector -g3 -pedantic -W -Wall -Wbad-function-cast -Wcast-align
+      -Wcast-qual -Wdisabled-optimization -Wendif-labels -Wfloat-equal -Wformat=2 -Wformat-nonliteral -Winline
+      -Wmissing-declarations -Wmissing-prototypes -Wnested-externs -Wno-unused-parameter -Wpointer-arith -Wshadow
+      -Wstrict-prototypes -Wstack-protector -Wswitch -Wundef -Wwrite-strings"
+  - PKG_CONFIG_PATH="../_dep_install/lib/pkgconfig" cmake .. -DCMAKE_C_FLAGS="$CFLAGS"
   - cmake --build .

@@ -8,22 +8,22 @@ typedef int bool;
 #define true 1
 #define false 0
 
-double d_abs(double d) {
+static double d_abs(double d) {
   return ((d > 0) ? d : -d);
 }
 
-void assert(bool expression, char * error_message) {
+static void assert(bool expression, char * error_message) {
   if (!expression) {
     printf("%s", error_message);
     exit(-1);
   }
 }
 
-double fp_to_db(fp_t a) {
+static double fp_to_db(fp_t a) {
   return (double) (a / ((double) (1 << 16)));
 }
 
-void addition_test(fp_t a, fp_t b, double c, double d) {
+static void addition_test(fp_t a, fp_t b, double c, double d) {
   char error_message[256];
   double expected;
   fp_t ans;
@@ -39,7 +39,7 @@ void addition_test(fp_t a, fp_t b, double c, double d) {
   assert(expression, error_message);
 }
 
-void subtraction_test(fp_t a, fp_t b, double c, double d) {
+static void subtraction_test(fp_t a, fp_t b, double c, double d) {
   char error_message[256];
   double expected;
   fp_t ans;
@@ -55,7 +55,7 @@ void subtraction_test(fp_t a, fp_t b, double c, double d) {
   assert(expression, error_message);
 }
 
-void multiplication_test(fp_t a, fp_t b, double c, double d) {
+static void multiplication_test(fp_t a, fp_t b, double c, double d) {
   char error_message[256];
   double expected;
   fp_t ans;
@@ -73,7 +73,7 @@ void multiplication_test(fp_t a, fp_t b, double c, double d) {
   assert(expression, error_message);
 }
 
-void division_test(fp_t a, fp_t b, double c, double d) {
+static void division_test(fp_t a, fp_t b, double c, double d) {
   char error_message[256];
   double expected;
   fp_t ans;
@@ -91,7 +91,7 @@ void division_test(fp_t a, fp_t b, double c, double d) {
   assert(expression, error_message);
 }
 
-void conversion_to_fp_test() {
+static void conversion_to_fp_test(void) {
   char error_message[256];
   bool expression;
   fp_t a1;
@@ -130,7 +130,7 @@ void conversion_to_fp_test() {
   printf("Done\n");
 }
 
-void addition_tests() {
+static void addition_tests(void) {
   fp_t a;
   fp_t b;
 
@@ -169,7 +169,7 @@ void addition_tests() {
   printf("Done\n");
 }
 
-void subtraction_tests() {
+static void subtraction_tests(void) {
   fp_t a;
   fp_t b;
 
@@ -208,7 +208,7 @@ void subtraction_tests() {
   printf("Done\n");
 }
 
-void multiplication_tests() {
+static void multiplication_tests(void) {
   fp_t a;
   fp_t b;
 
@@ -252,7 +252,7 @@ void multiplication_tests() {
   printf("Done\n");
 }
 
-void division_tests() {
+static void division_tests(void) {
   fp_t a;
   fp_t b;
 
@@ -314,7 +314,7 @@ void division_tests() {
   printf("Done\n");
 }
 
-int main() {
+int main(void) {
   printf("--------------------\nRunning Unit Tests\n--------------------\n\n");
   conversion_to_fp_test();
   addition_tests();

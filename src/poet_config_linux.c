@@ -18,7 +18,7 @@
 /**
  * Get the current number of CPUs allocated for this process.
  */
-static inline unsigned int get_current_cpu_count() {
+static inline unsigned int get_current_cpu_count(void) {
   unsigned int curr_cpu_count = 0;
   long i;
   cpu_set_t* cur_mask;
@@ -52,7 +52,7 @@ static inline unsigned int get_current_cpu_count() {
  * Compare the current CPU governor state with the provided one.
  * Returns -1 on failure.
  */
-static inline int cpu_governor_cmp(unsigned int cpu, char* governor) {
+static inline int cpu_governor_cmp(unsigned int cpu, const char* governor) {
   FILE* fp;
   char buffer[128];
   int governor_cmp = -1;
@@ -104,9 +104,9 @@ static inline unsigned long get_current_cpu_frequency(unsigned int cpu) {
 }
 
 // try to get current CPU configuration state
-int get_cpu_state(const poet_cpu_state_t* states,
-                  unsigned int num_states,
-                  unsigned int* curr_state_id) {
+static int get_cpu_state(const poet_cpu_state_t* states,
+                         unsigned int num_states,
+                         unsigned int* curr_state_id) {
   int ret = -1;
   unsigned int i;
   unsigned int all_userspace = 1;
@@ -114,7 +114,10 @@ int get_cpu_state(const poet_cpu_state_t* states,
   if (curr_cpu_count == 0) {
     return ret;
   }
-  unsigned long freqs[curr_cpu_count];
+  unsigned long* freqs = malloc(curr_cpu_count * sizeof(unsigned long));
+  if (freqs == NULL) {
+    return ret;
+  }
 
   // these loops work since we use cores in order starting at cpu0
   for (i = 0; i < curr_cpu_count; i++) {
@@ -140,20 +143,21 @@ int get_cpu_state(const poet_cpu_state_t* states,
     }
   }
 
+  free(freqs);
   return ret;
 }
 
 int get_current_cpu_state(const void* states,
                           unsigned int num_states,
                           unsigned int* curr_state_id) {
-  return get_cpu_state((poet_cpu_state_t*) states, num_states, curr_state_id);
+  return get_cpu_state((const poet_cpu_state_t*) states, num_states, curr_state_id);
 }
 
 // Set CPU frequency and number of cores using taskset system call
-void apply_cpu_config_taskset(poet_cpu_state_t* cpu_states,
-                              unsigned int num_states,
-                              unsigned int id,
-                              unsigned int last_id) {
+static void apply_cpu_config_taskset(poet_cpu_state_t* cpu_states,
+                                     unsigned int num_states,
+                                     unsigned int id,
+                                     unsigned int last_id) {
   unsigned int i;
   int retvalsyscall = 0;
   char command[4096];

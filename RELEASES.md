@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+ * Added supported for stricter compile flags
+
 ## v2.0.0 - 2017-10-02
 
  * Removed dependency on Heartbeats 2.0

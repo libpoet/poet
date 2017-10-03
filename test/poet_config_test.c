@@ -8,7 +8,7 @@
 poet_control_state_t * cstates_speed;
 poet_cpu_state_t * cpu_states;
 
-int main() {
+int main(void) {
   unsigned int nctl_states;
   unsigned int ncpu_states;
   unsigned int curr_state_id;
