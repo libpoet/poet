@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 2.8.11)
 
 project(poet)
-set(PROJECT_VERSION 2.0.0)
+set(VERSION_MAJOR 2)
+set(VERSION_MINOR 0)
+set(VERSION_PATCH 0)
+set(PROJECT_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -std=gnu99")
 
@@ -39,6 +43,10 @@ if(${FIXED_POINT})
 endif()
 
 add_library(poet src/poet.c src/poet_config_linux.c)
+if(BUILD_SHARED_LIBS)
+  set_target_properties(poet PROPERTIES VERSION ${PROJECT_VERSION}
+                                        SOVERSION ${VERSION_MAJOR})
+endif()
 
 
 # Tests
