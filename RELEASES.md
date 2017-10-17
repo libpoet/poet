@@ -4,6 +4,7 @@
 
  * Added VERSION and SOVERSION properties to shared object library
  * Added support for stricter compile flags
+ * Use GNU standard installation directories (multiarch support)
 
 ## v2.0.0 - 2017-10-02
 
